@@ -12,7 +12,10 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 # Download VADER lexicon
-nltk.download("vader_lexicon")
+import os
+
+if not os.path.exists("/tmp/vader_lexicon"):
+    nltk.download("vader_lexicon", download_dir="/tmp")
 
 # ===============================
 # Load Dataset
