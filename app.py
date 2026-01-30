@@ -1,13 +1,11 @@
 import pandas as pd
 import re
 import streamlit as st
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix
 
 # ===============================
 # Load Dataset
@@ -26,11 +24,10 @@ def clean_text(text):
 df["clean_review"] = df["review"].apply(clean_text)
 
 # ===============================
-# MANUAL SENTIMENT LABELING
-# (Simple rule-based for demo)
+# Simple Rule-Based Labeling
 # ===============================
 def label_sentiment(text):
-    positive_words = ["good", "great", "fast", "excellent", "amazing", "satisfied", "love"]
+    positive_words = ["good", "great", "fast", "excellent", "amazing", "love", "satisfied"]
     negative_words = ["bad", "late", "cold", "poor", "terrible", "slow", "worst"]
 
     pos = sum(word in text for word in positive_words)
@@ -46,15 +43,12 @@ def label_sentiment(text):
 df["sentiment"] = df["clean_review"].apply(label_sentiment)
 
 # ===============================
-# Feature Extraction
+# Feature Extraction & Model
 # ===============================
-vectorizer = TfidfVectorizer(max_features=3000)
+vectorizer = TfidfVectorizer(max_features=2000)
 X = vectorizer.fit_transform(df["clean_review"])
 y = df["sentiment"]
 
-# ===============================
-# Train Model
-# ===============================
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
@@ -78,33 +72,28 @@ st.subheader("Dataset Preview")
 st.dataframe(df.head())
 
 st.subheader("Sentiment Distribution")
-fig1, ax1 = plt.subplots()
-sns.countplot(x="sentiment", data=df, ax=ax1)
-st.pyplot(fig1)
+sentiment_counts = df["sentiment"].value_counts()
+st.bar_chart(sentiment_counts)
 
-st.subheader("Model Performance")
-st.write(f"**Accuracy:** {accuracy:.2f}")
-st.text(classification_report(y_test, y_pred))
+st.subheader("Model Accuracy")
+st.write(f"Accuracy: **{accuracy:.2f}**")
 
 st.subheader("Confusion Matrix")
-fig2, ax2 = plt.subplots()
-sns.heatmap(
+cm_df = pd.DataFrame(
     cm,
-    annot=True,
-    fmt="d",
-    cmap="Blues",
-    xticklabels=["Negative", "Neutral", "Positive"],
-    yticklabels=["Negative", "Neutral", "Positive"]
+    index=["Negative", "Neutral", "Positive"],
+    columns=["Negative", "Neutral", "Positive"]
 )
-ax2.set_xlabel("Predicted")
-ax2.set_ylabel("Actual")
-st.pyplot(fig2)
+st.dataframe(cm_df)
 
 st.subheader("Try Your Own Review")
 user_input = st.text_area("Enter a food delivery review:")
 
 if st.button("Analyze Sentiment"):
-    cleaned = clean_text(user_input)
-    vector = vectorizer.transform([cleaned])
-    prediction = model.predict(vector)[0]
-    st.success(f"Predicted Sentiment: **{prediction}**")
+    if user_input.strip() == "":
+        st.warning("Please enter a review.")
+    else:
+        cleaned = clean_text(user_input)
+        vector = vectorizer.transform([cleaned])
+        prediction = model.predict(vector)[0]
+        st.success(f"Predicted Sentiment: **{prediction}**")
