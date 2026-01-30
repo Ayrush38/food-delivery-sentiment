@@ -86,21 +86,17 @@ st.set_page_config(page_title="Food Delivery Sentiment Analyzer")
 st.title("🍔 Online Food Delivery Review Sentiment Analyzer")
 
 st.markdown("""
-This system uses **VADER + TF-IDF + Naive Bayes**  
-User input will dynamically update the **sentiment distribution**.
+This system analyzes reviews using **VADER Sentiment Analysis**  
+and visualizes **sentiment scores for user-input reviews**.
 """)
 
 # ===============================
-# Store user reviews (session)
+# Dataset Graph
 # ===============================
-if "user_data" not in st.session_state:
-    st.session_state.user_data = []
-
-# ===============================
-# Dataset Preview
-# ===============================
-st.subheader("📄 Dataset Preview")
-st.dataframe(df.head())
+st.subheader("📊 Sentiment Distribution (Dataset)")
+fig1, ax1 = plt.subplots()
+sns.countplot(x="sentiment", data=df, ax=ax1)
+st.pyplot(fig1)
 
 # ===============================
 # Model Performance
@@ -110,48 +106,36 @@ st.write(f"**Accuracy:** {accuracy:.2f}")
 st.text(classification_report(y_test, y_pred))
 
 # ===============================
-# Confusion Matrix
-# ===============================
-st.subheader("🔎 Confusion Matrix")
-fig2, ax2 = plt.subplots()
-sns.heatmap(
-    cm,
-    annot=True,
-    fmt="d",
-    cmap="Blues",
-    xticklabels=["Negative", "Neutral", "Positive"],
-    yticklabels=["Negative", "Neutral", "Positive"]
-)
-ax2.set_xlabel("Predicted")
-ax2.set_ylabel("Actual")
-st.pyplot(fig2)
-
-# ===============================
 # User Input
 # ===============================
-st.subheader("✍️ Try Your Own Review")
+st.subheader("✍️ Analyze Your Own Review")
 user_input = st.text_area("Enter a food delivery review:")
 
-if st.button("Analyze Sentiment"):
+if st.button("Analyze Review"):
     cleaned = clean_text(user_input)
+
+    # ML Prediction
     vector = vectorizer.transform([cleaned])
     prediction = model.predict(vector)[0]
 
+    # VADER Scores
+    scores = sia.polarity_scores(cleaned)
+
     st.success(f"Predicted Sentiment: **{prediction}**")
 
-    # Save user review to session
-    st.session_state.user_data.append(prediction)
+    # ===============================
+    # GRAPH FOR USER REVIEW
+    # ===============================
+    st.subheader("📊 Sentiment Score for Your Review")
 
-# ===============================
-# UPDATED SENTIMENT DISTRIBUTION
-# ===============================
-st.subheader("📊 Sentiment Distribution (Updated)")
+    score_df = pd.DataFrame({
+        "Sentiment": ["Negative", "Neutral", "Positive"],
+        "Score": [scores["neg"], scores["neu"], scores["pos"]]
+    })
 
-combined_sentiments = pd.concat([
-    df["sentiment"],
-    pd.Series(st.session_state.user_data)
-])
+    fig2, ax2 = plt.subplots()
+    sns.barplot(x="Sentiment", y="Score", data=score_df, ax=ax2)
+    ax2.set_ylim(0, 1)
+    st.pyplot(fig2)
 
-fig1, ax1 = plt.subplots()
-sns.countplot(x=combined_sentiments, ax=ax1)
-st.pyplot(fig1)
+    st.write("**VADER Compound Score:**", scores["compound"])
